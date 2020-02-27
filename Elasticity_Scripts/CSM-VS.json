@@ -1,0 +1,209 @@
+{
+"CSM version": "2017-10-10",
+"description": "This represent a JSON template for CSM instance that specify the elasticity behavour of virtual machine (VL-Compute)",
+"CSM": {
+"States": 
+[
+{
+"name": "S1",
+"ResourceRequirements": {
+"Instances": "2",
+"Type": "initial",
+"Provider": "AWS"}
+},
+{
+"name": "S2",
+"ResourceRequirements": {
+"Instances": "4",
+"Type": "normal",
+"Provider": "AWS"}
+},
+{
+"name": "S3",
+"ResourceRequirements": {
+"Instances": "6",
+"Type": "normal",
+"Provider": "AWS"
+}
+},
+{
+"name": "S4",
+"ResourceRequirements": 
+{"Instances": "0",
+"Type": "final",
+"Provider": "-"}
+}
+],
+"Transition": 
+[ 
+{
+"Identifier": "T1",
+"Source": "S1",
+"Target": "S2",
+"Event": 
+{
+	"type": "Q-Event",
+	"properties": 
+	{
+	"metric": "cpuusage",
+	"type": "measurable",
+	"group": "false",
+	"function": "average",
+	"operator": ">=",
+	"threshold": "80",
+	"unit": "%",
+	"window": "40"
+	}
+},
+"Action": 
+{
+	"type": "Horizontal Scaling",
+	"properties": 
+	{
+	"name": "scale-out",
+	"resource-target": "VM1",
+	"provider": "AWS",
+	"adjustment-type": "change-in-capacity",
+	"adjust": 2,
+	"cooldown": 120
+	}
+}
+},
+
+{
+"Identifier": "T2",
+"Source": "S2",
+"Target": "S1",
+"Event": 
+{
+	"type": "Q-Event",
+	"properties": 
+	{
+	"metric": "cpuusage",
+	"group": "false",
+	"function": "average",
+	"operator": "<=",
+	"threshold": "20",
+	"unit": "%",
+	"window": "60"
+	}
+},
+"Action": 
+{
+	"type": "Horizontal Scaling",
+	"properties": 
+	{
+	"name": "scale-in",
+	"resource-target": "VM1",
+	"provider": "AWS",
+	"adjustment-type": "change-in-capacity",
+	"adjust": 2,
+	"cooldown": 120
+	}
+}
+},
+
+{
+"Identifier": "T3",
+"Source": "S2",
+"Target": "S3",
+"Event": 
+{
+	"type": "TP-Event",
+	"properties": 
+	{
+	"expression": "Every Saturday at 8:00:00 am"
+	}
+},
+"Action": 
+{
+	"type": "Horizontal Scaling",
+	"properties": 
+	{
+	"name": "scale-out",
+	"resource-target": "VM1",
+	"provider": "AWS",
+	"adjustment-type": "change-in-capacity",
+	"adjust": 2,
+	"cooldown": 120
+	}
+}
+},
+
+{
+"Identifier": "T4",
+"Source": "S3",
+"Target": "S2",
+"Event": 
+{
+	"type": "TP-Event",
+	"properties": 
+	{
+	"expression": "Every Monday at 8:00:00 am"
+	}
+},
+"Action": 
+{
+	"type": "Horizontal Scaling",
+	"properties": 
+	{
+	"name": "scale-in",
+	"resource-target": "VM1",
+	"provider": "AWS",
+	"adjustment-type": "change-in-capacity",
+	"adjust": 2,
+	"cooldown": 120
+	}
+}
+},
+
+{
+"Identifier": "T5, T6, T7",
+"Source": "S1, S2, S3",
+"Target": "S4",
+"Event": 
+{
+	"type": "TS-Event",
+	"properties": 
+	{
+	"expression": "Date=2018-12-31 11:59:30 am"
+	}
+},
+"Action": 
+{
+	"type": "Basic Action",
+	"properties": 
+	{
+	"name": "delete",
+	"resource-target": "VM1",
+	"provider": "AWS"
+	}
+}
+}
+],
+
+"Cloud Resources": 
+{
+"Ressource": 
+{
+"name": "VM1",
+"type": "Compute",
+"description": "",
+"Constraints": 
+{
+"name": "Availability",
+"operator": ">=",
+"value": "99",
+"unit": "%"
+},
+"ResourceRequirements":
+{
+"cpu": "4 GHZ",
+"memory": "8 GB",
+"instances": "5",
+"provider": "AWS"
+}
+}
+}
+}
+}

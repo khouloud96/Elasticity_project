@@ -1,0 +1,139 @@
+version: "3.3"
+
+networks:
+  net:
+    driver: overlay
+    attachable: true
+
+volumes:
+    prometheus: {}
+    grafana: {}
+    alertmanager: {}
+
+configs:
+  caddy_config:
+    file: ./caddy/Caddyfile
+
+services:
+  cadvisor:
+    image: google/cadvisor
+    networks:
+      - net
+    ports:
+      - "9500:9500"
+    command: -logtostderr -docker_only
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /:/rootfs:ro
+      - /var/run:/var/run
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  grafana:
+    image: stefanprodan/swarmprom-grafana:5.0.1
+    networks:
+      - net
+    environment:
+      - GF_SECURITY_ADMIN_USER=${ADMIN_USER:-DockerConnector}
+      - GF_SECURITY_ADMIN_PASSWORD=${ADMIN_PASSWORD:-MonitoringTask}
+      - GF_USERS_ALLOW_SIGN_UP=false
+
+    volumes:
+      - grafana:/var/lib/grafana
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  node-exporter:
+    image: stefanprodan/swarmprom-node-exporter:v0.15.2
+    networks:
+      - net
+    ports:
+      - "9100:9100"
+    environment:
+      - NODE_ID={{.Node.ID}}
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+      - /etc/hostname:/etc/nodename
+    command:
+      - '--path.sysfs=/host/sys'
+      - '--path.procfs=/host/proc'
+      - '--collector.textfile.directory=/etc/node-exporter/'
+      - '--collector.filesystem.ignored-mount-points=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--no-collector.ipvs'
+    deploy:
+      mode: global
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+
+  prometheus:
+    image: stefanprodan/swarmprom-prometheus:v2.2.0-rc.0
+    networks:
+      - net
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.path=/prometheus'
+      - '--storage.tsdb.retention=24h'
+    volumes:
+      - prometheus:/prometheus
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 2048M
+        reservations:
+          memory: 128M
+
+  caddy:
+    image: stefanprodan/caddy
+    ports:
+      - "3000:3000"
+      - "9090:9090"
+      - "9093:9093"
+      - "9094:9094"
+    networks:
+      - net
+    environment:
+      - ADMIN_USER=${ADMIN_USER:-DockerConnector}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD:-MonitoringTask}
+    configs:
+      - source: caddy_config
+        target: /etc/caddy/Caddyfile
+    deploy:
+      mode: replicated
+      replicas: 1
+      placement:
+        constraints:
+          - node.role == manager
+      resources:
+        limits:
+          memory: 128M
+        reservations:
+          memory: 64M
+   

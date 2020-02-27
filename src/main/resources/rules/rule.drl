@@ -1,0 +1,93 @@
+import com.elasticity.services.CurrentState;
+import com.elasticity.services.Cooldown;
+import com.elasticity.events.Q_Event;
+import com.elasticity.actions.Horizontal_Scaling;
+import java.time.LocalDateTime;
+import com.elasticity.actions.Basic_Action;
+import java.time.format.DateTimeFormatter;
+import java.util.Date;
+
+
+//===============================================================================
+rule "T1 Q-Event"
+    when
+       $currentState: CurrentState(S == "S1")
+       $cooldown: Cooldown(C == true)
+       Q_Event
+       (
+       metric == "cpuusage" && 
+       operator == ">=" && 
+       (float)valueMetric >= (float)threshold
+       && $cooldown.cooldownDate <= captureDate
+       )
+    then
+        System.out.println("\t\tExecute Action T1");
+        Horizontal_Scaling.Terraform_VM("scale-out","AWS","change-in-capacity",2);
+		modify ( $currentState ) { setS("S2") }; 
+		modify ( $cooldown ) { waitCooldown(120) };
+end
+//===============================================================================
+rule "T2 Q-Event"
+    when
+        $currentState: CurrentState(S == "S2") 
+        $cooldown: Cooldown(C == true)
+        Q_Event
+        (
+        metric == "cpuusage" 
+        && operator == "<=" 
+        && (float)valueMetric <= (float)threshold
+        && $cooldown.cooldownDate <= captureDate
+        )
+
+    then
+        System.out.println("\t\tExecute Action T2 ");
+        Horizontal_Scaling.Terraform_VM("scale-in","AWS","change-in-capacity",2);
+		modify ( $currentState ) { setS("S1") }; 
+		modify ( $cooldown ) { waitCooldown(120) };
+end
+//===============================================================================
+
+rule "T3 TP-Event : Every Saturday at 8:00:00 am"
+	timer(cron:0 0 8 ? * Sat) // ? : Any day of month and * : no specific month
+	when
+		$currentState: CurrentState(S == "S2")
+		$cooldown: Cooldown(C == true)
+	then
+		System.out.println("\t\tExecute Action T3");
+		modify ( $cooldown ) { waitCooldown(120) };
+    	modify ( $currentState ) { setS("S3") };
+end
+
+//===============================================================================
+
+rule "T4 TP-Event : Every Monday at 8:00:00 am"
+	timer(cron:0 0 8 ? * Mon)
+	when
+		$currentState: CurrentState(S == "S3")
+		$cooldown: Cooldown(C == true)
+	then
+		System.out.println("\t\tExecute Action T4");
+		modify ( $cooldown ) { waitCooldown(120) };
+    	modify ( $currentState ) { setS("S2") };
+end
+
+//===============================================================================
+
+
+rule "T5, T6, T7 TS-Event : Date=2018-12-31 11:59:30 am"
+	timer(cron:30 59 11 31 12 ? 2018)
+	when
+		($currentState: CurrentState(S == "S1") or $currentState: CurrentState(S == "S2") or $currentState: CurrentState(S == "S3"))
+		$cooldown: Cooldown(C == true)
+	then
+		System.out.println("\t\tExecute Action T5, T6 or T7");
+		modify ( $currentState ) { setS("S4") };
+		Basic_Action.Delete();
+end
+
+//===============================================================================
+
+
+
+
+
