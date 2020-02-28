@@ -113,7 +113,7 @@ public class Main {
 	        /******************************************************************************
 			 * Part 3 : Undeploy the infrastructure										  *
 			 ******************************************************************************/
-			boolean x;
+			/*boolean x;
 			System.out.println("Do you want do undeploy ?");
 			Scanner sc = new Scanner(System.in);
 			x = sc.nextBoolean();
@@ -122,7 +122,7 @@ public class Main {
 				Undeploy undeploy = new Undeploy();
 				undeploy.undeploy_app(terraformGlobalPath);
 			}
-			sc.close();
+			sc.close();*/
 			
 	    } catch (Throwable t) { t.printStackTrace(); }
 	}

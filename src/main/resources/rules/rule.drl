@@ -22,7 +22,7 @@ rule "T1 Q-Event"
        )
     then
         System.out.println("\t\tExecute Action T1");
-        Horizontal_Scaling.Terraform_VM("scale-out","AWS","change-in-capacity",2);
+        Horizontal_Scaling.Terraform_VM("scale-out","AWS","change-in-capacity",3);
 		modify ( $currentState ) { setS("S2") }; 
 		modify ( $cooldown ) { waitCooldown(120) };
 end
