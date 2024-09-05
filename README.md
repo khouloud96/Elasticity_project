@@ -5,7 +5,9 @@ This project, carried out in Telecom SudParis, is part of the graduation project
  - Java 8
  - Drools
  - Prometheus, CAdvisor, Node-Zxporter, Grafana
- - cloud computing, AWS
+ - cloud computing, AWS, AWS Educate
  - ...
-## IDE
+## Outils
  - Eclipse
+ - script shell
+ - Git, Github
